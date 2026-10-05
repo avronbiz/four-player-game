@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Four Player Board V42 — Player Guidance & Rankings</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;padding:24px;background:#fff;color:#202020}
+.wrap{max-width:920px;margin:auto}
+.layout{display:grid;grid-template-columns:minmax(500px,1fr) 270px;gap:26px;align-items:start}.left{min-width:0}
+h2{font-size:21px;margin:0 0 4px}.sub{color:#777;margin-bottom:18px}
+.board{width:min(540px,100%);aspect-ratio:1;margin:auto;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);border:2px solid #777}
+.cell{position:relative;border-right:1px solid #aaa;border-bottom:1px solid #aaa;display:flex;align-items:center;justify-content:center}
+.cell:nth-child(5n){border-right:0}.cell:nth-child(n+21){border-bottom:0}
+.x{position:absolute;width:62%;height:62%}.x:before,.x:after{content:"";position:absolute;left:50%;top:50%;width:3px;height:100%;background:#777}.x:before{transform:translate(-50%,-50%) rotate(45deg)}.x:after{transform:translate(-50%,-50%) rotate(-45deg)}
+.home{position:absolute;width:70%;height:70%;top:16%;display:grid;grid-template-columns:1fr 1fr;gap:7px;z-index:2}
+.home{position:absolute;width:70%;height:70%;top:16%;display:grid;grid-template-columns:1fr 1fr;gap:7px;z-index:2}
+.home i{
+ display:block;position:relative;border-radius:50%;visibility:hidden;
+ border:2px solid rgba(0,0,0,.32);
+ box-shadow:
+   inset 3px 3px 5px rgba(255,255,255,.62),
+   inset -4px -4px 6px rgba(0,0,0,.28),
+   0 3px 4px rgba(0,0,0,.22);
+}
+.home i:before,.home i:after{
+ content:"";position:absolute;width:5px;height:5px;border-radius:50%;
+ background:rgba(245,245,240,.9);
+ box-shadow:inset 0 1px 1px rgba(0,0,0,.35);
+}
+.home i:before{left:28%;top:27%;box-shadow:calc(100% + 5px) 0 0 rgba(245,245,240,.9)}
+.home i:after{left:28%;bottom:27%;box-shadow:calc(100% + 5px) 0 0 rgba(245,245,240,.9)}
+.red{background:radial-gradient(circle at 30% 23%,#ff8b8b,#d52b2b 66%,#8f1111)}
+.blue{background:radial-gradient(circle at 30% 23%,#88b5ff,#3978d5 66%,#174789)}
+.green{background:radial-gradient(circle at 30% 23%,#8be8a2,#34aa50 66%,#17672c)}
+.yellow{background:radial-gradient(circle at 30% 23%,#fff08a,#e4bd20 66%,#987609)}
+
+.home-red:after,.home-blue:after,.home-green:after,.home-yellow:after{
+ content:"";position:absolute;left:-18%;right:-18%;bottom:-16px;height:10px;
+ border-radius:1px;z-index:4;
+}
+.home-red:after{background:#ef2027}
+.home-blue:after{background:#2774df}
+.home-green:after{background:#20a04a}
+.home-yellow:after{background:#d5b51b}
+
+
+/* Interactive board movement */
+.board{position:relative}
+.cell.playable{cursor:pointer}
+.cell.playable:hover{background:#f7f9fc}
+.home-button{cursor:pointer;transition:filter .15s,transform .15s}
+.home-button:hover{filter:brightness(1.08)}
+.board-piece{
+ position:absolute;width:32px;height:32px;border-radius:50%;z-index:10;
+ border:2px solid rgba(0,0,0,.32);
+ box-shadow:inset 2px 2px 4px rgba(255,255,255,.6),inset -3px -3px 5px rgba(0,0,0,.28),0 2px 4px rgba(0,0,0,.25);
+ transform:translate(-50%,-50%);cursor:pointer;
+ transition:transform .18s ease,filter .15s;
+}
+.board-piece:hover{filter:brightness(1.08)}
+.board-piece.home-state{filter:saturate(.72) brightness(.82);opacity:.78;cursor:default}
+.board-piece.home-state:hover{filter:saturate(.72) brightness(.82)}
+.board-piece.open-state{filter:saturate(1.08) brightness(1.04);opacity:1;cursor:pointer;z-index:30}
+.board-piece.open-state:hover{filter:brightness(1.14);opacity:1}
+.board-piece.movable{cursor:pointer}
+.board-piece.movable:hover{filter:brightness(1.10)}
+.board-piece.openable{cursor:pointer;filter:brightness(.96);opacity:.82}
+.board-piece.openable:hover{filter:brightness(1.08);opacity:1}
+.board-piece.pending-open{outline:3px dashed #222;outline-offset:2px;opacity:1}
+
+.board-piece.selected{outline:3px solid #222;outline-offset:2px}
+.board-piece.red{background:radial-gradient(circle at 30% 23%,#ff8b8b,#d52b2b 66%,#8f1111)}
+.board-piece.blue{background:radial-gradient(circle at 30% 23%,#88b5ff,#3978d5 66%,#174789)}
+.board-piece.green{background:radial-gradient(circle at 30% 23%,#8be8a2,#34aa50 66%,#17672c)}
+.board-piece.yellow{background:radial-gradient(circle at 30% 23%,#fff08a,#e4bd20 66%,#987609)}
+.board-piece:before,.board-piece:after{content:"";position:absolute;width:4px;height:4px;border-radius:50%;background:#f5f5f0;box-shadow:inset 0 1px 1px rgba(0,0,0,.35)}
+.board-piece:before{left:25%;top:24%;box-shadow:calc(100% + 5px) 0 0 #f5f5f0}
+.board-piece:after{left:25%;bottom:24%;box-shadow:calc(100% + 5px) 0 0 #f5f5f0}
+.move-message{margin-top:7px;font-size:12px;color:#666;line-height:1.35}
+.board-status{margin-top:8px;font-size:12px;text-align:center;color:#666;min-height:17px}
+
+.panel{border:1px solid #ddd;border-radius:15px;padding:16px;background:#fafafa}
+.turn{
+ margin-top:10px;padding:9px 10px;border-radius:8px;
+ text-align:center;font-weight:700;font-size:15px;
+ border:1px solid rgba(0,0,0,.10);
+}
+.turn.player1{background:#fde9e9;color:#a51d1d}
+.turn.player2{background:#e8f0fc;color:#245ca9}
+.turn.player3{background:#fff7d9;color:#8c7200}
+.turn.player4{background:#e7f6eb;color:#23783b}
+.action-prompt{margin-top:8px;padding:10px 10px;border-radius:8px;background:#fff;border:1px solid #ddd;text-align:center;font-size:13px;font-weight:700;color:#333;line-height:1.3;min-height:40px;display:flex;align-items:center;justify-content:center}
+.stage{position:relative;width:100%;height:250px;border:1px solid #d8d8d8;border-radius:12px;overflow:hidden;background:#fafafa}
+.piece{position:absolute;width:44px;height:44px;transform-style:preserve-3d;perspective:700px;will-change:transform}
+.face{position:absolute;inset:0;border-radius:50%;backface-visibility:hidden;border:3px solid #9d9991;background:radial-gradient(circle at 32% 25%,#e5e2dc,#aaa69f 68%,#817d76);box-shadow:0 4px 7px #0004;display:grid;place-items:center}
+.back{transform:rotateX(180deg);background:radial-gradient(circle at 32% 25%,#d0cdc7,#85817b 68%,#57534e);border-color:#68645e}
+.holes{position:relative;width:24px;height:24px}.hole{position:absolute;width:5px;height:5px;border-radius:50%;background:#f7f5ef;box-shadow:inset 0 1px 1px #0006}
+.hole.a{left:1px;top:1px}.hole.b{right:1px;top:1px}.hole.c{left:1px;bottom:1px}.hole.d{right:1px;bottom:1px}
+.result{height:62px;display:flex;align-items:center;justify-content:center;gap:9px}.result b{font-size:44px}.muted{color:#777;font-size:13px;text-align:center;min-height:18px}
+button{width:100%;margin-top:10px;height:44px;border:1px solid #ccd2dc;border-radius:10px;background:#edf2fa;font-size:16px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+.test-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+ .test-controls button{margin-top:0;height:36px;font-size:13px;background:#fff7df;border-color:#e2c86b;color:#705800}
+.test-input-row{display:grid;grid-template-columns:auto 70px 1fr;align-items:center;gap:8px}
+.test-input-row label{font-size:12px;font-weight:700;color:#705800;white-space:nowrap}
+.test-input-row input{width:70px;height:36px;border:1px solid #e2c86b;border-radius:8px;background:#fffdf5;text-align:center;font-size:15px;font-weight:700}
+
+.note{font-size:12px;color:#777;margin-top:10px;line-height:1.4}
+.finished-box{width:min(540px,100%);margin:12px auto 0;border:1px solid #d7d7d7;border-radius:12px;background:#fafafa;padding:12px}
+.finished-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,.95fr);gap:16px;align-items:stretch}
+.finished-section{min-width:0}
+.finished-title{font-size:13px;font-weight:700;color:#555;margin-bottom:8px}
+.finished-row{display:grid;grid-template-columns:108px 1fr;align-items:center;min-height:38px;padding:3px 0;border-top:1px solid #e9e9e9}
+.finished-row:first-child{border-top:0}
+.finished-label{font-size:12px;font-weight:700;color:#666}
+.finished-slots{display:grid;grid-template-columns:repeat(4,30px);gap:7px;align-items:center}
+.finished-slot{width:30px;height:30px;border:1px dashed #cfcfcf;border-radius:50%;background:#fff;display:grid;place-items:center}
+.finished-piece{width:25px;height:25px;border-radius:50%;position:relative;border:2px solid rgba(0,0,0,.32);box-shadow:inset 2px 2px 3px rgba(255,255,255,.6),inset -3px -3px 4px rgba(0,0,0,.28),0 2px 3px rgba(0,0,0,.18)}
+.finished-piece:before,.finished-piece:after{content:"";position:absolute;width:3px;height:3px;border-radius:50%;background:#f5f5f0;box-shadow:inset 0 1px 1px rgba(0,0,0,.35)}
+.finished-piece:before{left:24%;top:23%;box-shadow:calc(100% + 4px) 0 0 #f5f5f0}
+.finished-piece:after{left:24%;bottom:23%;box-shadow:calc(100% + 4px) 0 0 #f5f5f0}
+.finished-empty{width:25px;height:25px;border-radius:50%;opacity:0}
+.rank-box{border-left:1px solid #e1e1e1;padding-left:16px}
+.rank-title{font-size:13px;font-weight:700;color:#555;margin-bottom:8px}
+.rank-row{display:grid;grid-template-columns:38px 1fr;align-items:center;min-height:31px;border-top:1px solid #e9e9e9;font-size:12px}
+.rank-row:first-child{border-top:0}
+.rank-place{font-weight:800;color:#777}
+.rank-name{font-weight:700;color:#444}
+.rank-empty{color:#aaa;font-weight:400}
+@media(max-width:520px){.finished-layout{grid-template-columns:1fr}.rank-box{border-left:0;border-top:1px solid #e1e1e1;padding-left:0;padding-top:12px}.finished-row{grid-template-columns:90px 1fr}.finished-slots{gap:5px}}
+
+@media(max-width:760px){.layout{grid-template-columns:1fr}.panel{max-width:540px;margin:auto}}
+
+/* Mobile test-app layout */
+@media (max-width:760px){
+  body{padding:10px 8px;font-size:14px}
+  .wrap{width:100%;max-width:560px}
+  h2{font-size:20px;margin-bottom:4px}
+  .sub{font-size:12px;margin-bottom:10px}
+  .layout{grid-template-columns:1fr;gap:12px}
+  .left{width:100%}
+  .board{width:min(540px,calc(100vw - 16px));margin:0 auto}
+  .panel{width:100%;max-width:540px;margin:0 auto;padding:12px;border-radius:12px}
+  .turn{font-size:15px;padding:10px 8px}
+  .action-prompt{font-size:13px;min-height:44px;padding:9px}
+  button{height:46px;font-size:16px}
+  .test-input-row{grid-template-columns:auto 64px minmax(0,1fr);gap:6px}
+  .test-input-row input{width:64px;height:40px}
+  .test-controls button{height:40px;font-size:12px;line-height:1.05;padding:0 5px}
+  .stage{height:min(52vw,250px);min-height:205px}
+  .finished-box{width:min(540px,calc(100vw - 16px));margin-top:10px;padding:10px}
+  .finished-layout{grid-template-columns:1fr;gap:10px}
+  .rank-box{border-left:0;border-top:1px solid #e1e1e1;padding-left:0;padding-top:10px}
+  .finished-row{grid-template-columns:92px 1fr;min-height:36px}
+  .finished-slots{grid-template-columns:repeat(4,30px);gap:6px}
+  .note{font-size:11px}
+  .move-message,.board-status{font-size:11px}
+}
+@media (max-width:380px){
+  .finished-row{grid-template-columns:84px 1fr}
+  .finished-slots{grid-template-columns:repeat(4,27px);gap:5px}
+  .finished-slot{width:27px;height:27px}
+  .finished-piece{width:23px;height:23px}
+  .test-input-row label{font-size:11px}
+  .test-controls button{font-size:11px}
+}
+</style>
+<link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#ffffff">
+</head>
+<body>
+<div class="wrap">
+<h2>Four-Player Game Board V43 — Mobile Test App</h2>
+<div class="sub">Four player home squares • realistic buttons • mobile-friendly test version</div>
+<div class="layout">
+<div class="left">
+<div class="board" id="board">
+  <div class="cell"></div><div class="cell"></div><div class="cell"><span class="x"></span><div class="home home-red"><i class="red"></i><i class="red"></i><i class="red"></i><i class="red"></i></div></div><div class="cell"></div><div class="cell"></div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  <div class="cell"><span class="x"></span><div class="home home-blue"><i class="blue"></i><i class="blue"></i><i class="blue"></i><i class="blue"></i></div></div><div class="cell"></div><div class="cell"><span class="x"></span></div><div class="cell"></div><div class="cell"><span class="x"></span><div class="home home-green"><i class="green"></i><i class="green"></i><i class="green"></i><i class="green"></i></div></div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"><span class="x"></span><div class="home home-yellow"><i class="yellow"></i><i class="yellow"></i><i class="yellow"></i><i class="yellow"></i></div></div><div class="cell"></div><div class="cell"></div>
+</div>
+<div class="finished-box" id="finishedBox">
+  <div class="finished-layout">
+    <div class="finished-section">
+      <div class="finished-title">Finished Buttons — Common Home</div>
+      <div id="finishedGrid"></div>
+    </div>
+    <div class="rank-box">
+      <div class="rank-title">Game Ranking</div>
+      <div id="rankingGrid"></div>
+    </div>
+  </div>
+</div>
+<div id="boardStatus" class="board-status">Player 1: Toss the buttons.</div>
+<div class="move-message">Grey buttons are still in home and cannot be moved normally. After a 4 or 8 opening, only opened buttons become available for movement.</div>
+</div>
+
+<div class="panel">
+  <b>Button Toss</b>
+  <div class="muted" style="text-align:left;margin-top:5px">The identified player tosses the buttons.<br><b>Opening:</b> 4 opens 1 button; 8 opens 2 buttons. <b>Bonus:</b> 4 or 8 gives another toss.</div>
+  <div id="turn" class="turn player1">Player 1's Turn — Red</div>
+  <div id="actionPrompt" class="action-prompt">Player 1 — Toss the buttons</div>
+  <button id="toss">Toss buttons</button>
+  <div class="test-controls test-input-row">
+    <label for="testValue">TEST TOSS</label>
+    <input id="testValue" type="number" min="1" max="8" step="1" value="4" aria-label="Test toss result">
+    <button id="testRun" class="test-btn">Run Test Toss</button>
+  </div>
+  <div class="stage" id="stage"></div>
+  <div class="result"><span class="muted">Result</span><b id="result">–</b></div>
+  <div class="muted" id="status">Ready — buttons at rest</div>
+  <div class="note">The TEST TOSS control is temporary and forces the entered result (1–8) while using the normal toss/game flow. It will be removed from the final version.<br><br>Loose Tic-Tac motion with a shared damping phase. The result appears on the same frame that the buttons reach their final rest.</div>
+</div>
+</div>
+</div>
+
+<script>
+const stage=document.getElementById('stage');
+const tossBtn=document.getElementById('toss');
+const testValueEl=document.getElementById('testValue');
+const testRunBtn=document.getElementById('testRun');
+const resultEl=document.getElementById('result');
+const statusEl=document.getElementById('status');
+const N=4,R=22;
+let buttons=[],raf=0,tossing=false;
+let currentPlayer=1;
+let playerState=[0,0,0,0].map(()=>({opened:0,completed:0}));
+let lastToss=null;
+// Fairness rule: at least one 4 or 8 must occur within every 12 completed tosses.
+let tossesSinceSpecial=0;
+let forcedSpecialValue=null;
+let forcedTestValue=null;
+const players=[
+  {name:'Player 1',color:'Red',cls:'player1'},
+  {name:'Player 2',color:'Blue',cls:'player2'},
+  {name:'Player 3',color:'Yellow',cls:'player3'},
+  {name:'Player 4',color:'Green',cls:'player4'}
+];
+function playerLabel(p){return `${players[p-1].name} — ${players[p-1].color}`;}
+function renderRanking(){
+  rankingGrid.innerHTML='';
+  const places=['1st','2nd','3rd','4th'];
+  for(let i=0;i<4;i++){
+    const row=document.createElement('div'); row.className='rank-row';
+    const place=document.createElement('div'); place.className='rank-place'; place.textContent=places[i];
+    const name=document.createElement('div'); name.className='rank-name';
+    const p=rankings[i];
+    if(p){name.textContent=playerLabel(p);}
+    else {name.textContent=i<3?'— awaiting finish':'—'; name.classList.add('rank-empty');}
+    row.append(place,name); rankingGrid.appendChild(row);
+  }
+}
+function setActionPrompt(text){ actionPromptEl.textContent=text; }
+function promptToss(){ setActionPrompt(`${players[currentPlayer-1].name} — Toss the buttons`); }
+function promptMove(value){ setActionPrompt(`${players[currentPlayer-1].name} — Choose a button to move ${value} square${value===1?'':'s'}`); }
+function promptOpening(value,alreadyOpen){
+  if(value===4) setActionPrompt(`${players[currentPlayer-1].name} — Open a home button${alreadyOpen?' or move an opened button':''}`);
+  else setActionPrompt(`${players[currentPlayer-1].name} — Open up to 2 home buttons${alreadyOpen?' or move an opened button':''}`);
+}
+function isRanked(p){return rankings.includes(p);}
+function allButtonsFinished(p){return pieces.filter(q=>q.player===p).every(q=>q.state==='finished');}
+function registerWin(p){
+  if(!rankings.includes(p) && allButtonsFinished(p)){
+    rankings.push(p);
+    playerState[p-1].completed=4;
+    renderRanking();
+    return rankings.length;
+  }
+  return 0;
+}
+function nextActivePlayer(){
+  for(let i=0;i<4;i++){
+    currentPlayer=(currentPlayer%4)+1;
+    if(!isRanked(currentPlayer)) return;
+  }
+}
+
+const turnEl=document.getElementById('turn');
+const actionPromptEl=document.getElementById('actionPrompt');
+const rankingGrid=document.getElementById('rankingGrid');
+let rankings=[];
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function createButton(normal,x,y){
+  const el=document.createElement('div'); el.className='piece';
+  function face(back){
+    const f=document.createElement('div'); f.className='face'+(back?' back':'');
+    const h=document.createElement('div'); h.className='holes';
+    for(const c of ['a','b','c','d']){
+      const q=document.createElement('i');q.className='hole '+c;h.appendChild(q);
+    }
+    f.appendChild(h);return f;
+  }
+  el.append(face(false),face(true));stage.appendChild(el);
+  return {el,normal,x,y,vx:0,vy:0,spin:0,angle:rand(0,360),flip:normal?0:180,
+          active:false,settle:0};
+}
+function draw(o){
+  o.el.style.transform=`translate3d(${o.x-R}px,${o.y-R}px,0) rotateZ(${o.angle}deg) rotateX(${o.flip}deg)`;
+}
+
+
+/* ---------------- Board movement engine ----------------
+   Board coordinates are 0..4 x 0..4.
+   Outer track: 16 perimeter cells, anti-clockwise.
+   Inner track: 8 non-centre cells of the 3x3 centre ring, clockwise.
+   Each player's entry into the inner ring is from the side of their
+   original home direction. The centre X is the common completed home.
+*/
+const boardEl=document.getElementById('board');
+const boardStatusEl=document.getElementById('boardStatus');
+
+const outerCW=[
+ [0,0],[0,1],[0,2],[0,3],[0,4],
+ [1,4],[2,4],[3,4],[4,4],
+ [4,3],[4,2],[4,1],[4,0],
+ [3,0],[2,0],[1,0]
+];
+// Anti-clockwise is reverse of the clockwise perimeter order.
+const outerCCW=[...outerCW].reverse();
+
+const innerCW=[
+ [1,2],[1,3],[1,4-0], // temporary corrected below
+];
+const innerRingCW=[
+ [1,2],[1,3],[2,3],[3,3],
+ [3,2],[3,1],[2,1],[1,1]
+];
+
+const homeCoords={
+ 1:[0,2],  // top
+ 2:[2,0],  // left
+ 3:[4,2],  // bottom
+ 4:[2,4]   // right
+};
+const entryInnerIndex={1:1,2:7,3:5,4:3};
+const playerClass={1:'red',2:'blue',3:'yellow',4:'green'};
+
+const pieces=[];
+for(let p=1;p<=4;p++)for(let b=0;b<4;b++){
+  pieces.push({
+    id:`p${p}b${b}`,player:p,index:b,
+    state:'home', // home, open, outer, inner, finished
+    pos:[...homeCoords[p]],
+    pathIndex:null
+  });
+}
+
+const finishedGrid=document.getElementById('finishedGrid');
+function setupFinishedTray(){
+  finishedGrid.innerHTML='';
+  for(let p=1;p<=4;p++){
+    const row=document.createElement('div'); row.className='finished-row';
+    const label=document.createElement('div'); label.className='finished-label';
+    label.textContent=`${players[p-1].name} — ${players[p-1].color}`;
+    const slots=document.createElement('div'); slots.className='finished-slots';
+    for(let i=0;i<4;i++){
+      const slot=document.createElement('div'); slot.className='finished-slot';
+      slot.dataset.player=p; slot.dataset.slot=i;
+      slots.appendChild(slot);
+    }
+    row.append(label,slots); finishedGrid.appendChild(row);
+  }
+}
+function renderFinishedTray(){
+  for(let p=1;p<=4;p++){
+    const row=finishedGrid.children[p-1];
+    if(!row)continue;
+    const slots=row.querySelectorAll('.finished-slot');
+    const done=pieces.filter(q=>q.player===p&&q.state==='finished').sort((a,b)=>a.index-b.index);
+    slots.forEach((slot,i)=>{
+      slot.innerHTML='';
+      if(done[i]){
+        const el=document.createElement('div');
+        el.className=`finished-piece ${playerClass[done[i].player]}`;
+        el.title=`Player ${p} finished button ${done[i].index+1}`;
+        slot.appendChild(el);
+      }else{
+        const empty=document.createElement('div'); empty.className='finished-empty'; slot.appendChild(empty);
+      }
+    });
+  }
+  renderRanking();
+}
+setupFinishedTray();
+
+let selectedPiece=null;
+let lastTossResult=null;
+let moveBusy=false;
+let pendingExtraToss=false;
+
+function samePos(a,b){return a[0]===b[0]&&a[1]===b[1]}
+function outerIndex(pos){
+  return outerCCW.findIndex(q=>samePos(q,pos));
+}
+function innerIndex(pos){
+  return innerRingCW.findIndex(q=>samePos(q,pos));
+}
+function cellCenter(row,col){
+  const W=boardEl.clientWidth,H=boardEl.clientHeight;
+  return {x:(col+.5)*W/5,y:(row+.5)*H/5};
+}
+function createBoardPiece(piece){
+  const el=document.createElement('div');
+  el.className=`board-piece ${playerClass[piece.player]}`;
+  el.dataset.id=piece.id;
+  el.title=`Player ${piece.player} button`;
+  el.addEventListener('click',e=>{e.stopPropagation();selectPiece(piece.id)});
+  boardEl.appendChild(el);
+  piece.el=el;
+  renderPiece(piece);
+}
+function renderPiece(piece){
+  if(!piece.el)return;
+  if(piece.state==='finished'){piece.el.style.display='none';return}
+  piece.el.style.display='';
+  const c=cellCenter(piece.pos[0],piece.pos[1]);
+
+  // Every button sharing a board square is laid out in a compact grid.
+  // Opened buttons get visual priority so they remain easy to identify,
+  // while unopened home buttons remain visibly grouped underneath.
+  const same=pieces.filter(q=>q.state!=='finished'&&samePos(q.pos,piece.pos));
+  const opened=same.filter(q=>q.state==='open');
+  const home=same.filter(q=>q.state==='home');
+  const visualGroup=[...opened,...same.filter(q=>q.state!=='open')];
+  const k=Math.max(0,visualGroup.indexOf(piece));
+  const count=visualGroup.length;
+
+  let size=32;
+  let gap=2;
+  if(count>=13){size=18;gap=2}
+  else if(count>=9){size=21;gap=2}
+  else if(count>=5){size=25;gap=3}
+  else {size=30;gap=4}
+  piece.el.style.width=size+'px';
+  piece.el.style.height=size+'px';
+
+  const cols=count<=4?2:count<=9?3:4;
+  const rows=Math.ceil(count/cols);
+  const col=k%cols, row=Math.floor(k/cols);
+  const ox=(col-(cols-1)/2)*(size+gap);
+  const oy=(row-(rows-1)/2)*(size+gap);
+  piece.el.style.left=c.x+'px';
+  piece.el.style.top=c.y+'px';
+  piece.el.style.setProperty('--ox',ox+'px');
+  piece.el.style.setProperty('--oy',oy+'px');
+  piece.el.style.transform=`translate(calc(-50% + ${ox}px),calc(-50% + ${oy}px))`;
+  // Opened buttons are always painted above unopened home buttons.
+  piece.el.style.zIndex=(piece.state==='open'?200:100)+k;
+  piece.el.classList.toggle('selected',selectedPiece===piece.id);
+  updatePieceVisual(piece);
+}
+function renderAllPieces(){pieces.forEach(renderPiece);renderFinishedTray()}
+function playerPieces(p){return pieces.filter(q=>q.player===p&&q.state!=='finished')}
+function findPiece(id){return pieces.find(q=>q.id===id)}
+function openingQuota(){
+  return lastTossResult===4 ? 1 : (lastTossResult===8 ? 2 : 0);
+}
+function openedThisToss(){ return playerState[currentPlayer-1].openingThisToss || 0; }
+function isOpeningToss(){ return lastTossResult===4 || lastTossResult===8; }
+function hasOpenedButton(p=currentPlayer){ return pieces.some(q=>q.player===p && q.state==='open'); }
+function canOpenPiece(piece){
+  return piece.player===currentPlayer && piece.state==='home' && isOpeningToss() &&
+         openedThisToss()<openingQuota() && !moveBusy;
+}
+function canMovePiece(piece){
+  // A 4/8 toss is a choice. If the player already has an opened button,
+  // that button must be available for movement on the new toss.
+  // For an 8, once the player chooses to open a button during THIS toss,
+  // the second opening must be completed before the bonus toss begins.
+  // This prevents the 4 -> open -> bonus 4 sequence from asking for
+  // another opening instead of allowing the existing opened button to move.
+  const count=openedThisToss();
+  const quota=openingQuota();
+  const openingSelectionIncomplete = isOpeningToss() &&
+                                     lastTossResult===8 &&
+                                     count>0 && count<quota;
+  return piece.player===currentPlayer &&
+         (piece.state==='open' || piece.state==='outer' || piece.state==='inner') &&
+         lastTossResult!==null &&
+         !openingSelectionIncomplete &&
+         !moveBusy;
+}
+function currentPlayerCanMove(piece){ return canOpenPiece(piece) || canMovePiece(piece); }
+
+function updatePieceVisual(piece){
+  if(!piece.el)return;
+  const isCurrent=piece.player===currentPlayer;
+  const openable=canOpenPiece(piece);
+  const movable=canMovePiece(piece);
+  piece.el.classList.toggle('home-state',piece.state==='home');
+  piece.el.classList.toggle('open-state',piece.state==='open');
+  piece.el.classList.toggle('openable',openable);
+  piece.el.classList.toggle('movable',movable);
+  piece.el.classList.toggle('pending-open',selectedPiece===piece.id && openable);
+  piece.el.title=openable ? `Click to open Player ${piece.player} button` :
+                   movable ? `Click to move Player ${piece.player} button ${lastTossResult} squares` :
+                   (piece.state==='home' ? 'Button is still in home' : piece.state==='open' ? 'Opened — available for the next toss' : 'Not available right now');
+}
+
+function selectPiece(id){
+  const piece=findPiece(id);
+  if(!piece){return}
+
+  if(canOpenPiece(piece)){
+    openPiece(piece);
+    return;
+  }
+  if(canMovePiece(piece)){
+    selectedPiece=id;renderAllPieces();
+    moveSelectedPiece();
+    return;
+  }
+  if(piece.player===currentPlayer && piece.state==='open' && lastTossResult!==null && !moveBusy){
+    boardStatusEl.textContent=`This opened button is available to move ${lastTossResult} squares.`;
+  }else{
+    boardStatusEl.textContent=`Only Player ${currentPlayer}'s available buttons can be selected.`;
+  }
+}
+
+function openPiece(piece){
+  if(!canOpenPiece(piece))return;
+  moveBusy=true;
+  selectedPiece=piece.id;
+
+  // Opening does NOT move the button onto the track. It stays in its own
+  // home square, but changes to the bright 'open' state so it is eligible
+  // to be selected on the bonus toss. Its next movement starts from this
+  // player's normal entry/home square.
+  piece.state='open';
+  piece.pathIndex=null;
+  piece.pos=[...homeCoords[piece.player]];
+
+  playerState[currentPlayer-1].openingThisToss=(playerState[currentPlayer-1].openingThisToss||0)+1;
+  playerState[currentPlayer-1].opened++;
+  renderAllPieces();
+
+  setTimeout(()=>{
+    moveBusy=false;
+    selectedPiece=null;
+    const count=openedThisToss();
+    const quota=openingQuota();
+    renderAllPieces();
+
+    const remainingHome = pieces.filter(q=>q.player===currentPlayer && q.state==='home').length;
+    // Normally an 8 requires two openings. However, if fewer than two home
+    // buttons remain, opening every remaining home button completes the
+    // opening action and the player must still receive the single bonus toss.
+    // Likewise, a 4 completes as soon as its one permitted opening is made.
+    const requiredForThisToss = Math.min(quota, count + remainingHome);
+    if(count>=quota || remainingHome===0 || count>=requiredForThisToss){
+      // The opening consumes the current toss; the 4/8 bonus is now the next toss.
+      lastTossResult=null;
+      pendingExtraToss=true;
+      tossBtn.disabled=false;
+      boardStatusEl.textContent=`${count} button${count>1?'s':''} opened and remains at home. Bonus toss for Player ${currentPlayer}.`;
+      setActionPrompt(`${players[currentPlayer-1].name} — Toss the buttons (bonus toss)`);
+      statusEl.textContent=`Opening complete — opened button stays at home; ${currentPlayer} gets another toss.`;
+    }else{
+      // With an 8, keep the first opened button at home and let the player
+      // choose the second home button before the bonus toss starts.
+      boardStatusEl.textContent=`${count} of ${quota} buttons opened. Choose another home button.`;
+      setActionPrompt(`${players[currentPlayer-1].name} — Choose another home button to open`);
+      renderAllPieces();
+    }
+  },220);
+}
+
+function moveOnePathStep(piece, isLastStep){
+  if(piece.state==='home'){
+    const start=outerIndex(homeCoords[piece.player]);
+    const idx=start;
+    piece.state='outer';piece.pathIndex=idx;piece.pos=[...outerCCW[idx]];
+    return;
+  }
+
+  if(piece.state==='open'){
+    // The first movement step from an opened home button places it on the
+    // player's starting/entry square. Remaining steps continue normally.
+    const start=outerIndex(homeCoords[piece.player]);
+    piece.state='outer';piece.pathIndex=start;piece.pos=[...outerCCW[start]];
+    return;
+  }
+
+  if(piece.state==='outer'){
+    const idx=piece.pathIndex;
+    const homeOuter=outerIndex(homeCoords[piece.player]);
+    const predecessor=(homeOuter-1+outerCCW.length)%outerCCW.length;
+    if(idx===predecessor){
+      piece.state='inner';
+      piece.pathIndex=entryInnerIndex[piece.player];
+      piece.pos=[...innerRingCW[piece.pathIndex]];
+    }else{
+      const next=(idx+1)%outerCCW.length;
+      piece.pathIndex=next;
+      piece.pos=[...outerCCW[next]];
+    }
+    return;
+  }
+
+  if(piece.state==='inner'){
+    const idx=piece.pathIndex;
+    const finalApproach={1:0,2:6,3:4,4:2}[piece.player];
+    if(idx===finalApproach && isLastStep){
+      piece.state='finished';
+      piece.pos=[2,2];
+      piece.pathIndex=null;
+    }else{
+      piece.pathIndex=(idx+1)%innerRingCW.length;
+      piece.pos=[...innerRingCW[piece.pathIndex]];
+    }
+  }
+}
+function cutOpponents(piece){
+  if(piece.state==='home'||piece.state==='open'||piece.state==='finished')return false;
+  const victims=pieces.filter(q=>q!==piece&&q.state!=='finished'&&q.state!=='home'&&q.state!=='open'&&samePos(q.pos,piece.pos));
+  let cut=false;
+  victims.forEach(v=>{
+    v.state='home';v.pathIndex=null;v.pos=[...homeCoords[v.player]];
+    cut=true;
+  });
+  return cut;
+}
+function animateMove(piece,steps,done){
+  moveBusy=true;
+  let n=0;
+
+  // An opened button is still physically in its home square. Moving it for
+  // the next toss first places it on the player's normal starting/entry
+  // square, but that placement does NOT consume one of the tossed squares.
+  // The complete toss value must then be counted from that starting square.
+  const go=()=>{
+    if(n===0 && piece.state==='open'){
+      // Opening placement is not a movement step. Put the button on its
+      // starting/entry square, show that placement, then continue with the
+      // full tossed number of actual track steps.
+      const start=outerIndex(homeCoords[piece.player]);
+      piece.state='outer';
+      piece.pathIndex=start;
+      piece.pos=[...outerCCW[start]];
+      renderAllPieces();
+      setTimeout(go,190);
+      return;
+    }
+
+    if(n>=steps){moveBusy=false;done();return}
+    moveOnePathStep(piece,n===steps-1);
+    renderAllPieces();
+    n++;
+    setTimeout(go,190);
+  };
+  go();
+}
+function moveSelectedPiece(){
+  const piece=findPiece(selectedPiece);
+  const steps=lastTossResult;
+  if(!piece||steps===null||piece.state==='home')return;
+
+  selectedPiece=null;renderAllPieces();
+  animateMove(piece,steps,()=>{
+    const cut=cutOpponents(piece);
+    const finished=(piece.state==='finished');
+    const winningPlace=finished ? registerWin(currentPlayer) : 0;
+    renderAllPieces();
+
+    if(winningPlace){
+      // A player who has completed all four buttons has finished the race and
+      // leaves the turn rotation. Their rank is shown in the tray.
+      if(rankings.length>=3){
+        lastTossResult=null; pendingExtraToss=false; tossBtn.disabled=true;
+        setActionPrompt(`Game ranking: ${rankings.map((p,i)=>`${i+1}st/2nd/3rd`.split('/')[i]+' '+playerLabel(p)).join(' • ')}`);
+        boardStatusEl.textContent=`${players[currentPlayer-1].name} wins ${winningPlace}${winningPlace===1?'st':winningPlace===2?'nd':'rd'} place. The top three places are now decided.`;
+        statusEl.textContent='Game ranking recorded';
+      }else{
+        nextActivePlayer();
+        updateTurn();
+        tossBtn.disabled=false;
+        promptToss();
+        boardStatusEl.textContent=`${players[rankings[rankings.length-1]-1].name} finishes ${winningPlace}${winningPlace===1?'st':winningPlace===2?'nd':'rd'} place. ${players[currentPlayer-1].name}'s turn.`;
+        statusEl.textContent='Player finished — continuing with remaining players';
+      }
+    }else if(cut||finished||steps===4||steps===8){
+      lastTossResult=null;
+      pendingExtraToss=true;
+      tossBtn.disabled=false;
+      updateTurn();
+      const reason=finished&&cut?'cut a button and reached the common home':
+                   finished?'entered the common home':
+                   cut?'cut an opponent':
+                   `completed a ${steps} move`;
+      boardStatusEl.textContent=`${reason} — Player ${currentPlayer} gets another toss.`;
+      setActionPrompt(`${players[currentPlayer-1].name} — Toss the buttons (bonus toss)`);
+      statusEl.textContent=`Bonus toss — Player ${currentPlayer}`;
+    }else{
+      lastTossResult=null;
+      nextActivePlayer();
+      updateTurn();
+      tossBtn.disabled=false;
+      promptToss();
+      boardStatusEl.textContent=`Move complete. ${players[currentPlayer-1].name}'s turn. Toss the buttons.`;
+      statusEl.textContent='Ready — buttons at rest';
+    }
+    renderAllPieces();
+  });
+}
+
+function setupBoardPieces(){
+  pieces.forEach(createBoardPiece);
+  boardEl.addEventListener('click',()=>{
+    if(moveBusy)return;
+    selectedPiece=null;renderAllPieces();
+  });
+}
+
+function updateTurn(){
+  const p=players[currentPlayer-1];
+  turnEl.className=`turn ${p.cls}`;
+  turnEl.textContent=`${p.name}'s Turn — ${p.color}`;
+}
+
+function placeAtRest(){
+  cancelAnimationFrame(raf);
+  stage.replaceChildren(); buttons=[];
+  const W=stage.clientWidth,H=stage.clientHeight;
+  const states=Array.from({length:N},()=>Math.random()<.5);
+  // Well separated initial resting positions.
+  const pos=[
+    {x:W*.21,y:H*.27},{x:W*.73,y:H*.28},
+    {x:W*.30,y:H*.70},{x:W*.76,y:H*.70}
+  ];
+  for(let i=0;i<N;i++){
+    const o=createButton(states[i],pos[i].x,pos[i].y);
+    buttons.push(o);draw(o);
+  }
+  resultEl.textContent='–';
+  statusEl.textContent='Ready — buttons at rest';
+}
+
+function resolveOverlaps(){
+  const W=stage.clientWidth,H=stage.clientHeight;
+  for(let pass=0;pass<3;pass++){
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+      const a=buttons[i],b=buttons[j];
+      let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||.001;
+      const minD=2*R+1;
+      if(d<minD){
+        const nx=dx/d,ny=dy/d,over=minD-d;
+        a.x-=nx*over*.5;a.y-=ny*over*.5;
+        b.x+=nx*over*.5;b.y+=ny*over*.5;
+      }
+    }
+    for(const o of buttons){
+      o.x=clamp(o.x,R,W-R);o.y=clamp(o.y,R,H-R);
+    }
+  }
+}
+
+function testToss(forcedValue){
+  if(tossing)return;
+  const value=Number(forcedValue);
+  if(!Number.isInteger(value) || value<1 || value>8){
+    statusEl.textContent='Test toss must be an integer from 1 to 8.';
+    testValueEl.focus();
+    return;
+  }
+  // TEST ONLY: run the exact normal toss flow, but force only the final result.
+  // All opening, movement, bonus-toss and turn logic remains unchanged.
+  forcedTestValue=value;
+  toss();
+}
+
+function toss(){
+  if(tossing)return;
+  // If the previous 11 completed tosses contained no 4 or 8, this toss is
+  // guaranteed to be a special toss. The physical settling animation still
+  // runs normally; only the final orientation outcome is constrained.
+  if(forcedTestValue===null && forcedSpecialValue===null){
+    forcedSpecialValue = (tossesSinceSpecial >= 11) ? (Math.random()<0.5 ? 4 : 8) : null;
+  }
+  tossing=true;tossBtn.disabled=true;resultEl.textContent='–';
+  statusEl.textContent='Tossing…';
+
+  const start=performance.now();
+  let last=start;
+  const shakeEnd=1.85;       // vigorous Tic-Tac shaking
+  const settleEnd=3.00;      // common settling end — result appears on this frame
+  const W=stage.clientWidth,H=stage.clientHeight;
+
+  // All four release simultaneously.
+  for(const o of buttons){
+    o.active=true;o.settle=0;
+    const a=rand(0,Math.PI*2),speed=rand(120,170);
+    o.vx=Math.cos(a)*speed;o.vy=Math.sin(a)*speed;
+    o.spin=rand(-900,900);
+    o.angle=rand(0,360);o.flip=rand(0,360);
+  }
+
+  function frame(now){
+    const dt=Math.min((now-last)/1000,.021);last=now;
+    const t=(now-start)/1000;
+
+    for(const o of buttons){
+      if(!o.active)continue;
+
+      // Short, irregular impulses: the button runs in one direction,
+      // hits something, changes direction, then runs again.
+      if(t<shakeEnd && Math.random()<dt*4.0){
+        const a=rand(0,Math.PI*2);
+        const impulse=rand(20,62);
+        o.vx+=Math.cos(a)*impulse;
+        o.vy+=Math.sin(a)*impulse;
+      }
+
+      // Smooth energy loss. There is deliberately NO hard cut-off.
+      let damping;
+      if(t<1.45) damping=Math.pow(.82,dt);
+      else if(t<shakeEnd) damping=Math.pow(.60,dt);
+      else {
+        const q=Math.min(1,(t-shakeEnd)/(settleEnd-shakeEnd));
+        // Gradually increase friction as the shake dies.
+        damping=Math.pow(0.035 + 1.05*q,dt);
+      }
+
+      o.vx*=damping;o.vy*=damping;
+      o.spin*= t<shakeEnd ? Math.pow(.56,dt) :
+                         Math.pow(.035 + .70*Math.min(1,(t-shakeEnd)/2),dt);
+
+      o.x+=o.vx*dt;
+      o.y+=o.vy*dt;
+      o.angle+=o.spin*dt;
+      o.flip+=o.spin*dt*.40;
+
+      // Wall rebounds.
+      if(o.x<=R){
+        o.x=R;o.vx=Math.abs(o.vx)*.82;
+        o.spin+=rand(-260,260);o.flip+=rand(55,125);
+      }else if(o.x>=W-R){
+        o.x=W-R;o.vx=-Math.abs(o.vx)*.82;
+        o.spin+=rand(-260,260);o.flip+=rand(55,125);
+      }
+      if(o.y<=R){
+        o.y=R;o.vy=Math.abs(o.vy)*.82;
+        o.spin+=rand(-260,260);o.flip+=rand(55,125);
+      }else if(o.y>=H-R){
+        o.y=H-R;o.vy=-Math.abs(o.vy)*.82;
+        o.spin+=rand(-260,260);o.flip+=rand(55,125);
+      }
+    }
+
+    // Button-to-button collisions.
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+      const a=buttons[i],b=buttons[j];
+      const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||.001;
+      const minD=2*R+1;
+      if(d<minD){
+        const nx=dx/d,ny=dy/d,over=minD-d;
+        a.x-=nx*over*.5;a.y-=ny*over*.5;
+        b.x+=nx*over*.5;b.y+=ny*over*.5;
+
+        const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+        if(rel<0){
+          const impulse=-1.42*rel/2;
+          a.vx-=impulse*nx;a.vy-=impulse*ny;
+          b.vx+=impulse*nx;b.vy+=impulse*ny;
+          a.spin+=rand(-260,260);b.spin+=rand(-260,260);
+          a.flip+=rand(20,90);b.flip+=rand(20,90);
+        }
+      }
+    }
+
+    // Keep buttons from visually overlapping without moving them toward
+    // artificial target positions.
+    resolveOverlaps();
+
+    // Final settling phase: each button naturally loses translational and
+    // rotational energy. A small damped orientation correction makes the
+    // two faces lie flat progressively instead of snapping at the end.
+    if(t>=shakeEnd){
+      const q=Math.min(1,(t-shakeEnd)/(settleEnd-shakeEnd));
+      for(const o of buttons){
+        if(!o.active)continue;
+
+        // Slowly rotate the face toward the side it is already closest to.
+        const rad=o.flip*Math.PI/180;
+        // On the fairness-forced toss, guide all four buttons gradually
+        // toward the required special outcome: all normal = 4, all upside
+        // down = 8. This avoids a last-frame snap.
+        let target;
+        if(forcedTestValue!==null){
+          // Spread the requested number across the four buttons and let each
+          // face settle naturally; exactly N of the four finish face-up.
+          const idx=buttons.indexOf(o);
+          target=idx<forcedTestValue ? 0 : 180;
+        }else{
+          target=forcedSpecialValue===4 ? 0 :
+                 forcedSpecialValue===8 ? 180 :
+                 ((Math.cos(rad)>=0)?0:180);
+        }
+        let diff=target-o.flip;
+        while(diff>180)diff-=360;
+        while(diff<-180)diff+=360;
+
+        // Damped spring — strongest early in the settling phase,
+        // almost zero at the end.
+        const spring=(1-q)*20;
+        o.flip+=diff*spring*dt;
+        o.spin*=Math.pow(.055,dt);
+
+        // Gentle final translational damping.
+        o.vx*=Math.pow(.075,dt);
+        o.vy*=Math.pow(.075,dt);
+      }
+    }
+
+    for(const o of buttons)draw(o);
+
+    // All four share the same final settling instant. No individual button
+    // disappears early or waits after the others have stopped.
+    if(t>=settleEnd){
+      for(const o of buttons){
+        o.active=false;
+        o.vx=o.vy=o.spin=0;
+        // Only now, after the visible settling motion has essentially ended,
+        // lock the face to the nearest side.
+        o.flip=(Math.cos(o.flip*Math.PI/180)>=0)?0:180;
+      }
+      for(const o of buttons)draw(o);
+      finish();
+      return;
+    }
+
+    raf=requestAnimationFrame(frame);
+  }
+
+  raf=requestAnimationFrame(frame);
+}
+function advanceToNextPlayer(reason){
+  lastTossResult=null;
+  pendingExtraToss=false;
+  playerState[currentPlayer-1].openingThisToss=0;
+  nextActivePlayer();
+  updateTurn();
+  tossBtn.disabled=false;
+  promptToss();
+  boardStatusEl.textContent=reason || `${players[currentPlayer-1].name}: toss the buttons.`;
+  statusEl.textContent='Ready — buttons at rest';
+  renderAllPieces();
+}
+
+function hasMovableButton(){
+  return pieces.some(p=>canMovePiece(p));
+}
+
+function finish(){
+  let normal=buttons.filter(o=>Math.cos(o.flip*Math.PI/180)>0).length;
+  // A fairness-forced toss has an explicit guaranteed outcome.
+  // The animation has already been guided toward the matching orientation.
+  if(forcedTestValue!==null){
+    normal=forcedTestValue===8 ? 0 : forcedTestValue;
+    buttons.forEach((o,idx)=>o.flip=idx<forcedTestValue ? 0 : 180);
+  }else if(forcedSpecialValue===4){
+    normal=4;
+    buttons.forEach(o=>o.flip=0);
+  }else if(forcedSpecialValue===8){
+    normal=0;
+    buttons.forEach(o=>o.flip=180);
+  }
+  const value=forcedTestValue!==null ? forcedTestValue : (normal===0?8:normal);
+  resultEl.textContent=value;
+  if(value===4 || value===8) tossesSinceSpecial=0;
+  else tossesSinceSpecial++;
+  forcedSpecialValue=null;
+  forcedTestValue=null;
+  lastToss=value;
+  lastTossResult=value;
+  playerState[currentPlayer-1].openingThisToss=0;
+
+  if(value===4 || value===8){
+    statusEl.textContent=`${normal} normal + ${4-normal} upside down → ${value} • BONUS TOSS`;
+    tossBtn.disabled=true;
+    const alreadyOpen=hasOpenedButton();
+    boardStatusEl.textContent = value===4 ?
+      (alreadyOpen ?
+        `Player ${currentPlayer}: choose a home button to open, or move one opened button 4 squares.` :
+        `Player ${currentPlayer}: open 1 home button.`) :
+      (alreadyOpen ?
+        `Player ${currentPlayer}: open up to 2 home buttons, or move one opened button 8 squares.` :
+        `Player ${currentPlayer}: open up to 2 home buttons.`);
+    promptOpening(value,alreadyOpen);
+  }else if(hasMovableButton()){
+    statusEl.textContent=`${normal} normal + ${4-normal} upside down → ${value}`;
+    tossBtn.disabled=true;
+    boardStatusEl.textContent=`Player ${currentPlayer}: choose one available button to move ${value} squares.`;
+    promptMove(value);
+  }else{
+    // No button is available and 4/8 opening was not rolled. The player
+    // cannot make a move, so pass the turn automatically.
+    statusEl.textContent=`${normal} normal + ${4-normal} upside down → ${value} • no move available`;
+    boardStatusEl.textContent=`Player ${currentPlayer} has no opened button to move. Turn passes to the next player.`;
+    setActionPrompt(`${players[currentPlayer-1].name} — No move available; passing the turn`);
+    // The toss animation has finished. Clear the animation lock BEFORE
+    // handing control to the next player; otherwise the next player's Toss
+    // button remains visually enabled but toss() exits because tossing=true.
+    tossing=false;
+    renderAllPieces();
+    setTimeout(()=>advanceToNextPlayer(),650);
+    return;
+  }
+  tossing=false;
+  renderAllPieces();
+}
+
+tossBtn.addEventListener('click',toss);
+testRunBtn.addEventListener('click',()=>testToss(testValueEl.value));
+testValueEl.addEventListener('keydown',e=>{if(e.key==='Enter')testToss(testValueEl.value)});
+updateTurn();
+promptToss();
+renderRanking();
+placeAtRest();
+setupBoardPieces();
+window.addEventListener('resize',()=>{if(!tossing)placeAtRest()});
+
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script>
+</body>
+</html>
