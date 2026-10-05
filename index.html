@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Four Player Board V42 — Player Guidance & Rankings</title>
+<title>Four Player Board V44 — Mobile Bug Fixes</title>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;margin:0;padding:24px;background:#fff;color:#202020}
@@ -92,6 +92,9 @@ h2{font-size:21px;margin:0 0 4px}.sub{color:#777;margin-bottom:18px}
 .turn.player3{background:#fff7d9;color:#8c7200}
 .turn.player4{background:#e7f6eb;color:#23783b}
 .action-prompt{margin-top:8px;padding:10px 10px;border-radius:8px;background:#fff;border:1px solid #ddd;text-align:center;font-size:13px;font-weight:700;color:#333;line-height:1.3;min-height:40px;display:flex;align-items:center;justify-content:center}
+.last-result-badge{margin-top:8px;min-height:42px;padding:6px 10px;border:1px solid #d8d8d8;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px}
+.last-result-badge span{font-size:12px;color:#666;font-weight:700}
+.last-result-badge b{font-size:28px;line-height:1;color:#222;min-width:24px;text-align:center}
 .stage{position:relative;width:100%;height:250px;border:1px solid #d8d8d8;border-radius:12px;overflow:hidden;background:#fafafa}
 .piece{position:absolute;width:44px;height:44px;transform-style:preserve-3d;perspective:700px;will-change:transform}
 .face{position:absolute;inset:0;border-radius:50%;backface-visibility:hidden;border:3px solid #9d9991;background:radial-gradient(circle at 32% 25%,#e5e2dc,#aaa69f 68%,#817d76);box-shadow:0 4px 7px #0004;display:grid;place-items:center}
@@ -171,8 +174,8 @@ button:disabled{opacity:.55;cursor:wait}
 </head>
 <body>
 <div class="wrap">
-<h2>Four-Player Game Board V43 — Mobile Test App</h2>
-<div class="sub">Four player home squares • realistic buttons • mobile-friendly test version</div>
+<h2>Four-Player Game Board V44 — Mobile Test App</h2>
+<div class="sub">Four player home squares • realistic buttons • mobile-friendly test version • self-cut and mobile-result fixes</div>
 <div class="layout">
 <div class="left">
 <div class="board" id="board">
@@ -203,6 +206,7 @@ button:disabled{opacity:.55;cursor:wait}
   <div class="muted" style="text-align:left;margin-top:5px">The identified player tosses the buttons.<br><b>Opening:</b> 4 opens 1 button; 8 opens 2 buttons. <b>Bonus:</b> 4 or 8 gives another toss.</div>
   <div id="turn" class="turn player1">Player 1's Turn — Red</div>
   <div id="actionPrompt" class="action-prompt">Player 1 — Toss the buttons</div>
+  <div id="lastResultBadge" class="last-result-badge"><span>Last Toss</span><b id="lastResult">–</b></div>
   <button id="toss">Toss buttons</button>
   <div class="test-controls test-input-row">
     <label for="testValue">TEST TOSS</label>
@@ -223,6 +227,7 @@ const tossBtn=document.getElementById('toss');
 const testValueEl=document.getElementById('testValue');
 const testRunBtn=document.getElementById('testRun');
 const resultEl=document.getElementById('result');
+const lastResultEl=document.getElementById('lastResult');
 const statusEl=document.getElementById('status');
 const N=4,R=22;
 let buttons=[],raf=0,tossing=false;
@@ -617,7 +622,7 @@ function moveOnePathStep(piece, isLastStep){
 }
 function cutOpponents(piece){
   if(piece.state==='home'||piece.state==='open'||piece.state==='finished')return false;
-  const victims=pieces.filter(q=>q!==piece&&q.state!=='finished'&&q.state!=='home'&&q.state!=='open'&&samePos(q.pos,piece.pos));
+  const victims=pieces.filter(q=>q!==piece&&q.player!==piece.player&&q.state!=='finished'&&q.state!=='home'&&q.state!=='open'&&samePos(q.pos,piece.pos));
   let cut=false;
   victims.forEach(v=>{
     v.state='home';v.pathIndex=null;v.pos=[...homeCoords[v.player]];
@@ -722,7 +727,7 @@ function updateTurn(){
   turnEl.textContent=`${p.name}'s Turn — ${p.color}`;
 }
 
-function placeAtRest(){
+function placeAtRest(resetResult=true){
   cancelAnimationFrame(raf);
   stage.replaceChildren(); buttons=[];
   const W=stage.clientWidth,H=stage.clientHeight;
@@ -736,7 +741,10 @@ function placeAtRest(){
     const o=createButton(states[i],pos[i].x,pos[i].y);
     buttons.push(o);draw(o);
   }
-  resultEl.textContent='–';
+  if(resetResult){
+    resultEl.textContent='–';
+    lastResultEl.textContent='–';
+  }
   statusEl.textContent='Ready — buttons at rest';
 }
 
@@ -971,6 +979,7 @@ function finish(){
   }
   const value=forcedTestValue!==null ? forcedTestValue : (normal===0?8:normal);
   resultEl.textContent=value;
+  lastResultEl.textContent=value;
   if(value===4 || value===8) tossesSinceSpecial=0;
   else tossesSinceSpecial++;
   forcedSpecialValue=null;
@@ -1022,7 +1031,10 @@ promptToss();
 renderRanking();
 placeAtRest();
 setupBoardPieces();
-window.addEventListener('resize',()=>{if(!tossing)placeAtRest()});
+window.addEventListener('resize',()=>{
+  // Mobile browsers may fire resize while the address bar collapses/expands
+  // during ordinary scrolling. Never reset the game or erase the last result.
+});
 
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script>
